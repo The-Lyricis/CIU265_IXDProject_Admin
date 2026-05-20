@@ -2,6 +2,13 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from './supabase-config.js';
 
 const statusChip = document.getElementById('status-chip');
+const loginPanel = document.getElementById('login-panel');
+const appShell = document.getElementById('app-shell');
+const loginForm = document.getElementById('login-form');
+const passwordInput = document.getElementById('password-input');
+const rememberInput = document.getElementById('remember-input');
+const loginError = document.getElementById('login-error');
+const logoutBtn = document.getElementById('logout-btn');
 const sessionTitle = document.getElementById('session-title');
 const sessionSubtitle = document.getElementById('session-subtitle');
 const activeSessionId = document.getElementById('active-session-id');
@@ -34,6 +41,33 @@ function formatTime(value) {
         hour: '2-digit',
         minute: '2-digit',
     });
+}
+
+function setAppVisible(isVisible) {
+    loginPanel.hidden = isVisible;
+    appShell.hidden = !isVisible;
+}
+
+async function checkAuth() {
+    const response = await fetch('/api/auth/me', { credentials: 'include' });
+    const result = await response.json().catch(() => ({}));
+    return !!result.authenticated;
+}
+
+async function login(password, remember) {
+    const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ password, remember }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    return true;
+}
+
+async function logout() {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
 }
 
 async function loadCurrentSession() {
@@ -138,57 +172,89 @@ async function refreshAll() {
 }
 
 async function createNewSession() {
-    const { data, error } = await supabase
-        .from('sessions')
-        .insert({ status: 'active' })
-        .select('*')
-        .single();
-
-    if (error) throw new Error(error.message);
-
-    if (currentSessionId) {
-        await supabase.from('sessions').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', currentSessionId);
-    }
-
-    currentSessionId = data.id;
-    renderSession(data);
+    const response = await fetch('/api/sessions', { method: 'POST', credentials: 'include' });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    currentSessionId = result.session?.id || currentSessionId;
+    renderSession(result.session);
     await loadActivity();
     await loadCounts();
 }
 
 async function endCurrentSession() {
     if (!currentSessionId) return;
-    const { error } = await supabase
-        .from('sessions')
-        .update({ status: 'ended', ended_at: new Date().toISOString() })
-        .eq('id', currentSessionId);
-    if (error) throw new Error(error.message);
+    const response = await fetch(`/api/sessions/${encodeURIComponent(currentSessionId)}/end`, {
+        method: 'POST',
+        credentials: 'include',
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
     await refreshAll();
 }
 
-refreshBtn.addEventListener('click', () => refreshAll().catch((err) => {
-    console.error(err);
-    setStatus('Error');
-}));
+async function bootApp() {
+    const authenticated = await checkAuth();
+    if (!authenticated) {
+        setAppVisible(false);
+        setStatus('Locked');
+        return;
+    }
 
-reloadActivityBtn.addEventListener('click', () => loadActivity().catch(console.error));
-
-newSessionBtn.addEventListener('click', () => createNewSession().catch((err) => {
-    console.error(err);
-    setStatus('Error');
-}));
-
-endSessionBtn.addEventListener('click', () => endCurrentSession().catch((err) => {
-    console.error(err);
-    setStatus('Error');
-}));
-
-try {
-    await refreshAll();
-} catch (error) {
-    console.error(error);
-    setStatus('Offline');
-    sessionTitle.textContent = 'Supabase unavailable';
-    sessionSubtitle.textContent = String(error.message || error);
-    activityList.innerHTML = '<div class="activity-empty">Check your Supabase keys and table permissions.</div>';
+    setAppVisible(true);
+    try {
+        await refreshAll();
+    } catch (error) {
+        console.error(error);
+        setStatus('Offline');
+        sessionTitle.textContent = 'Supabase unavailable';
+        sessionSubtitle.textContent = String(error.message || error);
+        activityList.innerHTML = '<div class="activity-empty">Check your Supabase keys and table permissions.</div>';
+    }
 }
+
+loginForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    loginError.textContent = '';
+    const password = passwordInput.value.trim();
+    const remember = rememberInput.checked;
+
+    if (!password) {
+        loginError.textContent = 'Please enter the admin password.';
+        return;
+    }
+
+    try {
+        await login(password, remember);
+        passwordInput.value = '';
+        await bootApp();
+    } catch (error) {
+        console.error(error);
+        loginError.textContent = 'Incorrect password or login failed.';
+    }
+});
+
+logoutBtn?.addEventListener('click', async () => {
+    await logout();
+    setAppVisible(false);
+    setStatus('Locked');
+    loginError.textContent = '';
+});
+
+refreshBtn?.addEventListener('click', () => refreshAll().catch((err) => {
+    console.error(err);
+    setStatus('Error');
+}));
+
+reloadActivityBtn?.addEventListener('click', () => loadActivity().catch(console.error));
+
+newSessionBtn?.addEventListener('click', () => createNewSession().catch((err) => {
+    console.error(err);
+    setStatus('Error');
+}));
+
+endSessionBtn?.addEventListener('click', () => endCurrentSession().catch((err) => {
+    console.error(err);
+    setStatus('Error');
+}));
+
+await bootApp();

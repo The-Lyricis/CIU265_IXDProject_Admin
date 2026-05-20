@@ -1,0 +1,9 @@
+{
+  "name": "ciu265-ixd-project-admin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Minimal admin console for the CIU265 project.",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.56.0"
+  }
+}

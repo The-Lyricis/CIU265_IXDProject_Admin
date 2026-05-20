@@ -33,7 +33,8 @@ body {
 .topbar,
 .hero,
 .panel,
-.card {
+.card,
+.login-panel {
     background: rgba(255, 253, 248, 0.78);
     backdrop-filter: blur(16px);
     border: 1px solid var(--line);
@@ -99,6 +100,64 @@ h1 {
     gap: 10px;
     flex-wrap: wrap;
     justify-content: end;
+}
+
+.login-panel {
+    border-radius: 24px;
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 18px;
+    align-items: start;
+}
+
+.login-copy p:last-child {
+    margin-top: 8px;
+    color: var(--muted);
+    max-width: 58ch;
+}
+
+.login-form {
+    display: grid;
+    gap: 12px;
+    padding: 18px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid var(--line);
+}
+
+.login-form label {
+    display: grid;
+    gap: 6px;
+    font-size: 14px;
+    color: var(--muted);
+}
+
+.login-form input[type="password"] {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font: inherit;
+    background: white;
+    color: var(--ink);
+}
+
+.remember-row {
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink) !important;
+}
+
+.remember-row input {
+    width: 16px;
+    height: 16px;
+}
+
+.form-error {
+    min-height: 1.2em;
+    color: #8c2f2f;
+    font-size: 14px;
 }
 
 .btn {
@@ -197,7 +256,8 @@ h1 {
 @media (max-width: 920px) {
     .hero,
     .topbar,
-    .panel-header {
+    .panel-header,
+    .login-panel {
         flex-direction: column;
         align-items: start;
     }

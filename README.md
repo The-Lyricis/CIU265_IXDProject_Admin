@@ -34,6 +34,10 @@ Set these environment variables in Vercel:
 ```text
 SUPABASE_URL
 SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+ADMIN_PASSWORD
 ```
 
-This admin console uses the public key for reads. If you later want it to mutate data more broadly or bypass RLS, move those actions into a server-side API or Edge Function.
+This admin console uses the public key for reads and Vercel API routes for writes.
+`SUPABASE_SERVICE_ROLE_KEY` stays server-side only.
+`ADMIN_PASSWORD` is the shared password for the login page.
