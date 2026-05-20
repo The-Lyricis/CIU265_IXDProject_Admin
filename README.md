@@ -16,6 +16,12 @@ Start a new session
 End the current session
 Basic counts for photos, articles, and interviews
 Recent activity list
+Photo browser
+Legend unlock feed
+NPC-linked unlock details
+Top-voted photo spotlight
+Session-aware photo activity
+Admin login with remember me
 ```
 
 ## Data sources
@@ -41,3 +47,14 @@ ADMIN_PASSWORD
 This admin console uses the public key for reads and Vercel API routes for writes.
 `SUPABASE_SERVICE_ROLE_KEY` stays server-side only.
 `ADMIN_PASSWORD` is the shared password for the login page.
+
+## API routes
+
+```text
+/api/auth/login
+/api/auth/logout
+/api/auth/me
+/api/sessions
+/api/sessions/:id/end
+/api/dashboard
+```

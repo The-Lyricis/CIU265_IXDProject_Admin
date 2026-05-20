@@ -9,11 +9,15 @@
 <body>
     <main class="shell">
         <header class="topbar">
-            <div>
+            <div class="brand-lockup">
                 <p class="eyebrow">CIU265 CONTROL ROOM</p>
                 <h1>Admin</h1>
+                <p class="brand-subtitle">Photo ops, unlocks, and session control in one place.</p>
             </div>
-            <div class="status-chip" id="status-chip">Checking access</div>
+            <div class="topbar-meta">
+                <div class="status-chip" id="status-chip">Checking access</div>
+                <div class="live-pill" id="live-indicator">Idle</div>
+            </div>
         </header>
 
         <section class="login-panel card" id="login-panel">
@@ -51,26 +55,65 @@
                 </div>
             </section>
 
-            <section class="grid">
+            <section class="grid" id="stats-strip">
                 <article class="card metric">
                     <p class="card-label">Active Session</p>
                     <h3 id="active-session-id">--</h3>
                     <p id="active-session-state">Inactive</p>
                 </article>
                 <article class="card metric">
+                    <p class="card-label">Unlocked Legends</p>
+                    <h3 id="unlock-count">0</h3>
+                    <p id="unlock-note">Loaded from interviews</p>
+                </article>
+                <article class="card metric">
                     <p class="card-label">Citizen Photos</p>
                     <h3 id="photo-count">0</h3>
-                    <p id="photo-note">Loaded from `citizen_photos`</p>
+                    <p id="photo-note">Loaded from citizen_photos</p>
                 </article>
                 <article class="card metric">
                     <p class="card-label">Articles</p>
                     <h3 id="article-count">0</h3>
-                    <p id="article-note">Loaded from `frontpage_articles`</p>
+                    <p id="article-note">Loaded from frontpage_articles</p>
                 </article>
                 <article class="card metric">
                     <p class="card-label">Interviews</p>
                     <h3 id="interview-count">0</h3>
-                    <p id="interview-note">Loaded from `interviews`</p>
+                    <p id="interview-note">Loaded from interviews</p>
+                </article>
+            </section>
+
+            <section class="panel split-panels">
+                <article class="subpanel">
+                    <div class="panel-header">
+                        <div>
+                            <p class="section-label">Citizen Photos</p>
+                            <h2>Session gallery</h2>
+                            <p class="panel-summary" id="photo-summary">Waiting for photo data</p>
+                        </div>
+                        <button id="reload-photos-btn" class="btn btn-secondary" type="button">Reload</button>
+                    </div>
+                    <div class="photo-spotlight" id="photo-spotlight">
+                        <div class="activity-empty">No photo selected.</div>
+                    </div>
+                    <div class="photo-list" id="photo-list">
+                        <div class="activity-empty">No photos loaded.</div>
+                    </div>
+                </article>
+
+                <article class="subpanel">
+                    <div class="panel-header">
+                        <div>
+                            <p class="section-label">Unlocks</p>
+                            <h2>Legend unlock feed</h2>
+                            <p class="panel-summary" id="unlock-summary">Waiting for unlock data</p>
+                        </div>
+                        <button id="reload-unlocks-btn" class="btn btn-secondary" type="button">Reload</button>
+                    </div>
+                    <div class="unlock-list" id="unlock-list">
+                        <div class="activity-empty">No unlocks loaded.</div>
+                    </div>
+                    <p class="panel-footnote" id="lock-summary">No NPC profiles loaded</p>
                 </article>
             </section>
 

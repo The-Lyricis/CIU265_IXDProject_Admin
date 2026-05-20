@@ -1,8 +1,8 @@
-const COOKIE_NAME = 'ciu265_admin_session';
+import { cookieName } from '../_auth.js';
 
 export default async function handler(req, res) {
     const cookie = [
-        `${COOKIE_NAME}=`,
+        `${cookieName()}=`,
         'Path=/',
         'Max-Age=0',
         'HttpOnly',

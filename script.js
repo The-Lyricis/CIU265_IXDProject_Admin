@@ -16,14 +16,26 @@ const activeSessionState = document.getElementById('active-session-state');
 const photoCount = document.getElementById('photo-count');
 const articleCount = document.getElementById('article-count');
 const interviewCount = document.getElementById('interview-count');
+const unlockCount = document.getElementById('unlock-count');
 const activityList = document.getElementById('activity-list');
+const photoSpotlight = document.getElementById('photo-spotlight');
+const photoList = document.getElementById('photo-list');
+const unlockList = document.getElementById('unlock-list');
 const refreshBtn = document.getElementById('refresh-btn');
 const reloadActivityBtn = document.getElementById('reload-activity-btn');
+const reloadPhotosBtn = document.getElementById('reload-photos-btn');
+const reloadUnlocksBtn = document.getElementById('reload-unlocks-btn');
 const newSessionBtn = document.getElementById('new-session-btn');
 const endSessionBtn = document.getElementById('end-session-btn');
+const photoSummary = document.getElementById('photo-summary');
+const unlockSummary = document.getElementById('unlock-summary');
+const lockSummary = document.getElementById('lock-summary');
+const liveIndicator = document.getElementById('live-indicator');
+const statsStrip = document.getElementById('stats-strip');
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentSessionId = null;
+let dashboardCache = null;
 
 function setStatus(text) {
     statusChip.textContent = text;
@@ -70,6 +82,16 @@ async function logout() {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
 }
 
+async function loadDashboard() {
+    const response = await fetch('/api/dashboard', { credentials: 'include' });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(result.error || `HTTP ${response.status}`);
+    }
+    dashboardCache = result;
+    return result;
+}
+
 async function loadCurrentSession() {
     const { data, error } = await supabase
         .from('sessions')
@@ -81,18 +103,6 @@ async function loadCurrentSession() {
     if (error) throw new Error(error.message);
     currentSessionId = data?.id || null;
     return data || null;
-}
-
-async function loadCounts() {
-    const [photos, articles, interviews] = await Promise.all([
-        supabase.from('citizen_photos').select('id', { count: 'exact', head: true }),
-        supabase.from('frontpage_articles').select('id', { count: 'exact', head: true }),
-        supabase.from('interviews').select('id', { count: 'exact', head: true }),
-    ]);
-
-    photoCount.textContent = String(photos.count || 0);
-    articleCount.textContent = String(articles.count || 0);
-    interviewCount.textContent = String(interviews.count || 0);
 }
 
 function renderSession(session) {
@@ -123,7 +133,7 @@ function renderActivity(rows) {
         return `
             <article class="activity-row">
                 <div>
-                    <strong>${type}</strong><br>
+                    <strong>${type}</strong>
                     <small>${id}</small>
                 </div>
                 <div>${meta}</div>
@@ -133,41 +143,143 @@ function renderActivity(rows) {
     }).join('');
 }
 
-async function loadActivity() {
-    const [photos, articles, interviews] = await Promise.all([
-        supabase.from('citizen_photos').select('id, created_at, session_id, votes').order('created_at', { ascending: false }).limit(5),
-        supabase.from('frontpage_articles').select('id, created_at, session_id, title').order('created_at', { ascending: false }).limit(5),
-        supabase.from('interviews').select('id, completed_at, session_id, npc_id').order('completed_at', { ascending: false }).limit(5),
-    ]);
+function renderSpotlight(photo) {
+    if (!photo) {
+        photoSpotlight.innerHTML = '<div class="activity-empty">Select a photo to inspect it.</div>';
+        return;
+    }
 
-    const rows = [
-        ...(photos.data || []).map((row) => ({
-            ...row,
-            _type: 'photo',
-            _meta: `session ${shortId(row.session_id)} • votes ${row.votes ?? 0}`,
-        })),
-        ...(articles.data || []).map((row) => ({
-            ...row,
-            _type: 'article',
-            _meta: row.title || `session ${shortId(row.session_id)}`,
-        })),
-        ...(interviews.data || []).map((row) => ({
-            ...row,
-            _type: 'interview',
-            _meta: row.npc_id || `session ${shortId(row.session_id)}`,
-        })),
-    ].sort((a, b) => new Date(b.created_at || b.completed_at || 0) - new Date(a.created_at || a.completed_at || 0))
-     .slice(0, 10);
+    const sourceLabel = photo.source ? `Source: ${photo.source}` : 'Source: local capture';
+    const sessionLabel = photo.session_id ? `Session ${shortId(photo.session_id)}` : 'No session';
 
-    renderActivity(rows);
+    photoSpotlight.innerHTML = `
+        <div class="spotlight-image-wrap">
+            <img src="${photo.image_data}" alt="Citizen photo">
+        </div>
+        <div class="spotlight-meta">
+            <div>
+                <p class="section-label">Spotlight</p>
+                <h3>${shortId(photo.id)} · ${photo.votes ?? 0} votes</h3>
+            </div>
+            <div class="spotlight-tags">
+                <span>${sessionLabel}</span>
+                <span>${sourceLabel}</span>
+                <span>${formatTime(photo.created_at)}</span>
+            </div>
+        </div>
+    `;
+}
+
+function renderPhotoList(rows) {
+    if (!rows.length) {
+        photoList.innerHTML = '<div class="activity-empty">No photos found.</div>';
+        renderSpotlight(null);
+        if (photoSummary) photoSummary.textContent = 'No photos yet';
+        return;
+    }
+
+    const sorted = [...rows].sort((a, b) => {
+        if ((b.votes || 0) !== (a.votes || 0)) return (b.votes || 0) - (a.votes || 0);
+        return new Date(b.created_at) - new Date(a.created_at);
+    });
+
+    renderSpotlight(sorted[0]);
+    if (photoSummary) {
+        photoSummary.textContent = `${sorted.length} photos · top ${sorted[0].votes ?? 0} votes`;
+    }
+
+    photoList.innerHTML = sorted.map((row, index) => `
+        <article class="photo-row ${index === 0 ? 'is-top' : ''}">
+            <div>
+                <strong>${shortId(row.id)} · ${row.votes ?? 0} votes</strong>
+                <small>${row.session_id ? `Session ${shortId(row.session_id)}` : 'No session'} · ${formatTime(row.created_at)}</small>
+            </div>
+            <button class="btn btn-secondary" type="button" data-photo-id="${row.id}">Focus</button>
+        </article>
+    `).join('');
+
+    photoList.querySelectorAll('[data-photo-id]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const target = sorted.find((row) => row.id === button.dataset.photoId);
+            renderSpotlight(target);
+        });
+    });
+}
+
+function renderUnlocks(rows) {
+    if (!rows.length) {
+        unlockList.innerHTML = '<div class="activity-empty">No unlocks found.</div>';
+        unlockCount.textContent = '0';
+        if (unlockSummary) unlockSummary.textContent = 'No unlocks yet';
+        return;
+    }
+
+    unlockCount.textContent = String(rows.length);
+    if (unlockSummary) {
+        unlockSummary.textContent = `${rows.length} unlocks · latest ${rows[0].npc?.name || rows[0].npc_id || 'Unknown NPC'}`;
+    }
+
+    unlockList.innerHTML = rows.map((row) => `
+        <article class="unlock-row">
+            <div>
+                <strong>${row.npc?.name || row.npc_id || '--'}</strong>
+                <small>${row.npc?.role || 'Unknown role'} · ${row.npc?.era || 'No era'} · ${formatTime(row.completed_at)}</small>
+                <span class="unlock-detail">${row.quote || row.notes || 'Interview unlocked successfully.'}</span>
+            </div>
+            <button class="btn btn-secondary" type="button" data-unlock-id="${row.npc_id || ''}">Copy ID</button>
+        </article>
+    `).join('');
+
+    unlockList.querySelectorAll('[data-unlock-id]').forEach((button) => {
+        button.addEventListener('click', async () => {
+            const value = button.dataset.unlockId || '';
+            try {
+                await navigator.clipboard.writeText(value);
+                button.textContent = 'Copied';
+                setTimeout(() => {
+                    button.textContent = 'Copy ID';
+                }, 900);
+            } catch {
+                button.textContent = value;
+            }
+        });
+    });
+}
+
+function renderSummaryStrip(data) {
+    const counts = data?.counts || {};
+    photoCount.textContent = String(counts.photos ?? 0);
+    articleCount.textContent = String(counts.articles ?? 0);
+    interviewCount.textContent = String(counts.unlocks ?? 0);
+    unlockCount.textContent = String(counts.unlocks ?? 0);
+    if (lockSummary) {
+        lockSummary.textContent = `${counts.npc_profiles ?? 0} npc profiles loaded`;
+    }
+    if (liveIndicator) {
+        liveIndicator.textContent = data?.session?.status === 'active' ? 'Live session' : 'Idle';
+    }
+    if (statsStrip) {
+        statsStrip.setAttribute('data-state', data?.session?.status || 'unknown');
+    }
+}
+
+function renderDashboard(data) {
+    dashboardCache = data;
+    renderSummaryStrip(data);
+    renderSession(data?.session || null);
+    renderPhotoList(data?.photos || []);
+    renderUnlocks(data?.unlocks || []);
+    renderActivity(data?.recent_notes || []);
 }
 
 async function refreshAll() {
     setStatus('Refreshing');
-    const session = await loadCurrentSession();
+    const [session, dashboard] = await Promise.all([
+        loadCurrentSession(),
+        loadDashboard(),
+    ]);
     renderSession(session);
-    await loadCounts();
-    await loadActivity();
+    renderDashboard(dashboard);
     setStatus('Live');
 }
 
@@ -176,9 +288,7 @@ async function createNewSession() {
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
     currentSessionId = result.session?.id || currentSessionId;
-    renderSession(result.session);
-    await loadActivity();
-    await loadCounts();
+    await refreshAll();
 }
 
 async function endCurrentSession() {
@@ -206,9 +316,9 @@ async function bootApp() {
     } catch (error) {
         console.error(error);
         setStatus('Offline');
-        sessionTitle.textContent = 'Supabase unavailable';
+        sessionTitle.textContent = 'Dashboard unavailable';
         sessionSubtitle.textContent = String(error.message || error);
-        activityList.innerHTML = '<div class="activity-empty">Check your Supabase keys and table permissions.</div>';
+        activityList.innerHTML = '<div class="activity-empty">Check your Supabase keys, auth cookie, and API routes.</div>';
     }
 }
 
@@ -245,7 +355,9 @@ refreshBtn?.addEventListener('click', () => refreshAll().catch((err) => {
     setStatus('Error');
 }));
 
-reloadActivityBtn?.addEventListener('click', () => loadActivity().catch(console.error));
+reloadActivityBtn?.addEventListener('click', () => loadDashboard().then(renderDashboard).catch(console.error));
+reloadPhotosBtn?.addEventListener('click', () => loadDashboard().then(renderDashboard).catch(console.error));
+reloadUnlocksBtn?.addEventListener('click', () => loadDashboard().then(renderDashboard).catch(console.error));
 
 newSessionBtn?.addEventListener('click', () => createNewSession().catch((err) => {
     console.error(err);
