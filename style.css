@@ -374,6 +374,13 @@ h1 {
     justify-self: end;
 }
 
+.photo-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: end;
+}
+
 .activity-row {
     display: grid;
     grid-template-columns: 180px 1fr auto;

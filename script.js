@@ -25,6 +25,8 @@ const refreshBtn = document.getElementById('refresh-btn');
 const reloadActivityBtn = document.getElementById('reload-activity-btn');
 const reloadPhotosBtn = document.getElementById('reload-photos-btn');
 const reloadUnlocksBtn = document.getElementById('reload-unlocks-btn');
+const deleteSessionPhotosBtn = document.getElementById('delete-session-photos-btn');
+const deleteAllPhotosBtn = document.getElementById('delete-all-photos-btn');
 const newSessionBtn = document.getElementById('new-session-btn');
 const endSessionBtn = document.getElementById('end-session-btn');
 const photoSummary = document.getElementById('photo-summary');
@@ -35,7 +37,7 @@ const statsStrip = document.getElementById('stats-strip');
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentSessionId = null;
-let dashboardCache = null;
+let selectedPhotoId = null;
 
 function setStatus(text) {
     statusChip.textContent = text;
@@ -85,10 +87,7 @@ async function logout() {
 async function loadDashboard() {
     const response = await fetch('/api/dashboard', { credentials: 'include' });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) {
-        throw new Error(result.error || `HTTP ${response.status}`);
-    }
-    dashboardCache = result;
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
     return result;
 }
 
@@ -160,6 +159,7 @@ function renderSpotlight(photo) {
             <div>
                 <p class="section-label">Spotlight</p>
                 <h3>${shortId(photo.id)} · ${photo.votes ?? 0} votes</h3>
+                <p class="panel-summary">${photo.source ? `Source ${photo.source}` : 'Local capture'} · ${photo.session_id ? `Session ${shortId(photo.session_id)}` : 'No session'}</p>
             </div>
             <div class="spotlight-tags">
                 <span>${sessionLabel}</span>
@@ -183,7 +183,10 @@ function renderPhotoList(rows) {
         return new Date(b.created_at) - new Date(a.created_at);
     });
 
-    renderSpotlight(sorted[0]);
+    const nextPhoto = sorted.find((row) => row.id === selectedPhotoId) || sorted[0];
+    selectedPhotoId = nextPhoto?.id || null;
+    renderSpotlight(nextPhoto);
+
     if (photoSummary) {
         photoSummary.textContent = `${sorted.length} photos · top ${sorted[0].votes ?? 0} votes`;
     }
@@ -194,14 +197,27 @@ function renderPhotoList(rows) {
                 <strong>${shortId(row.id)} · ${row.votes ?? 0} votes</strong>
                 <small>${row.session_id ? `Session ${shortId(row.session_id)}` : 'No session'} · ${formatTime(row.created_at)}</small>
             </div>
-            <button class="btn btn-secondary" type="button" data-photo-id="${row.id}">Focus</button>
+            <div class="photo-actions">
+                <button class="btn btn-secondary" type="button" data-photo-id="${row.id}">Focus</button>
+                <button class="btn btn-ghost" type="button" data-photo-delete-id="${row.id}">Delete</button>
+            </div>
         </article>
     `).join('');
 
     photoList.querySelectorAll('[data-photo-id]').forEach((button) => {
         button.addEventListener('click', () => {
             const target = sorted.find((row) => row.id === button.dataset.photoId);
+            selectedPhotoId = target?.id || null;
             renderSpotlight(target);
+        });
+    });
+
+    photoList.querySelectorAll('[data-photo-delete-id]').forEach((button) => {
+        button.addEventListener('click', async () => {
+            const targetId = button.dataset.photoDeleteId || '';
+            if (!targetId) return;
+            if (!window.confirm('Delete this photo permanently?')) return;
+            await deletePhotoById(targetId);
         });
     });
 }
@@ -252,19 +268,12 @@ function renderSummaryStrip(data) {
     articleCount.textContent = String(counts.articles ?? 0);
     interviewCount.textContent = String(counts.unlocks ?? 0);
     unlockCount.textContent = String(counts.unlocks ?? 0);
-    if (lockSummary) {
-        lockSummary.textContent = `${counts.npc_profiles ?? 0} npc profiles loaded`;
-    }
-    if (liveIndicator) {
-        liveIndicator.textContent = data?.session?.status === 'active' ? 'Live session' : 'Idle';
-    }
-    if (statsStrip) {
-        statsStrip.setAttribute('data-state', data?.session?.status || 'unknown');
-    }
+    if (lockSummary) lockSummary.textContent = `${counts.npc_profiles ?? 0} npc profiles loaded`;
+    if (liveIndicator) liveIndicator.textContent = data?.session?.status === 'active' ? 'Live session' : 'Idle';
+    if (statsStrip) statsStrip.setAttribute('data-state', data?.session?.status || 'unknown');
 }
 
 function renderDashboard(data) {
-    dashboardCache = data;
     renderSummaryStrip(data);
     renderSession(data?.session || null);
     renderPhotoList(data?.photos || []);
@@ -281,6 +290,32 @@ async function refreshAll() {
     renderSession(session);
     renderDashboard(dashboard);
     setStatus('Live');
+}
+
+async function deletePhotoById(id) {
+    const response = await fetch('/api/photos', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ id }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    if (selectedPhotoId === id) selectedPhotoId = null;
+    await refreshAll();
+}
+
+async function deletePhotosByAction(action) {
+    const response = await fetch('/api/photos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    selectedPhotoId = null;
+    await refreshAll();
 }
 
 async function createNewSession() {
@@ -358,6 +393,26 @@ refreshBtn?.addEventListener('click', () => refreshAll().catch((err) => {
 reloadActivityBtn?.addEventListener('click', () => loadDashboard().then(renderDashboard).catch(console.error));
 reloadPhotosBtn?.addEventListener('click', () => loadDashboard().then(renderDashboard).catch(console.error));
 reloadUnlocksBtn?.addEventListener('click', () => loadDashboard().then(renderDashboard).catch(console.error));
+
+deleteSessionPhotosBtn?.addEventListener('click', async () => {
+    if (!window.confirm('Delete all photos in the current session?')) return;
+    try {
+        await deletePhotosByAction('delete-session');
+    } catch (err) {
+        console.error(err);
+        setStatus('Error');
+    }
+});
+
+deleteAllPhotosBtn?.addEventListener('click', async () => {
+    if (!window.confirm('Delete every photo in the database? This cannot be undone.')) return;
+    try {
+        await deletePhotosByAction('delete-all');
+    } catch (err) {
+        console.error(err);
+        setStatus('Error');
+    }
+});
 
 newSessionBtn?.addEventListener('click', () => createNewSession().catch((err) => {
     console.error(err);

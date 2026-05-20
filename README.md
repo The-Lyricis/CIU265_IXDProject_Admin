@@ -22,6 +22,9 @@ NPC-linked unlock details
 Top-voted photo spotlight
 Session-aware photo activity
 Admin login with remember me
+Single photo delete
+Clear current session photos
+Delete all photos
 ```
 
 ## Data sources
