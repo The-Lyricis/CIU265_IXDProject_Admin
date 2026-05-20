@@ -1,15 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
 import { hasAdminCookie } from './_auth.js';
-
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-function getSupabaseAdmin() {
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
-    return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-        auth: { persistSession: false, autoRefreshToken: false },
-    });
-}
+import { getSupabaseAdmin } from './_supabase.js';
 
 async function deletePhoto(supabase, id) {
     const { error } = await supabase.from('citizen_photos').delete().eq('id', id);
@@ -30,7 +20,10 @@ export default async function handler(req, res) {
 
     try {
         if (req.method === 'DELETE') {
-            const { id, session_id, scope } = req.query;
+            const body = req.body || {};
+            const id = req.query.id || body.id;
+            const session_id = req.query.session_id || body.session_id;
+            const scope = req.query.scope || body.scope;
 
             if (id) {
                 await deletePhoto(supabase, id);

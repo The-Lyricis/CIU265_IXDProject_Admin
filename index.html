@@ -12,7 +12,7 @@
             <div class="brand-lockup">
                 <p class="eyebrow">CIU265 CONTROL ROOM</p>
                 <h1>Admin</h1>
-                <p class="brand-subtitle">Photo ops, unlocks, and session control in one place.</p>
+                <p class="brand-subtitle">Monitor the live experience and clean up published material from one console.</p>
             </div>
             <div class="topbar-meta">
                 <div class="status-chip" id="status-chip">Checking access</div>
@@ -20,13 +20,21 @@
             </div>
         </header>
 
-        <section class="login-panel card" id="login-panel">
-            <div class="login-copy">
-                <p class="section-label">Sign in</p>
-                <h2>Enter admin access</h2>
-                <p>Use the shared admin password to unlock the control room.</p>
+        <section class="login-panel" id="login-panel">
+            <div class="login-lanes">
+                <article class="login-lane">
+                    <p class="section-label">Oversight</p>
+                    <h2>Live state</h2>
+                    <p>Sessions, unlocks, article counts, and recent activity.</p>
+                </article>
+                <article class="login-lane">
+                    <p class="section-label">Material Desk</p>
+                    <h2>Content tools</h2>
+                    <p>Photo cleanup, article edits, unlock removal, and NPC defaults.</p>
+                </article>
             </div>
             <form id="login-form" class="login-form">
+                <p class="section-label">Sign in</p>
                 <label>
                     <span>Password</span>
                     <input id="password-input" type="password" autocomplete="current-password" required>
@@ -41,97 +49,155 @@
         </section>
 
         <section id="app-shell" hidden>
-            <section class="hero">
-                <div class="hero-copy">
-                    <p class="section-label">Session Control</p>
-                    <h2 id="session-title">Current session loading</h2>
-                    <p id="session-subtitle">Waiting for Supabase.</p>
-                </div>
-                <div class="hero-actions">
-                    <button id="refresh-btn" class="btn btn-secondary" type="button">Refresh</button>
-                    <button id="new-session-btn" class="btn btn-primary" type="button">New Session</button>
-                    <button id="end-session-btn" class="btn btn-ghost" type="button">End Session</button>
-                    <button id="logout-btn" class="btn btn-ghost" type="button">Logout</button>
-                </div>
-            </section>
+            <nav class="workspace-tabs" aria-label="Admin sections">
+                <button class="tab-btn is-active" type="button" data-view="overview">Oversight</button>
+                <button class="tab-btn" type="button" data-view="materials">Material Desk</button>
+            </nav>
 
-            <section class="grid" id="stats-strip">
-                <article class="card metric">
-                    <p class="card-label">Active Session</p>
-                    <h3 id="active-session-id">--</h3>
-                    <p id="active-session-state">Inactive</p>
-                </article>
-                <article class="card metric">
-                    <p class="card-label">Unlocked Legends</p>
-                    <h3 id="unlock-count">0</h3>
-                    <p id="unlock-note">Loaded from interviews</p>
-                </article>
-                <article class="card metric">
-                    <p class="card-label">Citizen Photos</p>
-                    <h3 id="photo-count">0</h3>
-                    <p id="photo-note">Loaded from citizen_photos</p>
-                </article>
-                <article class="card metric">
-                    <p class="card-label">Articles</p>
-                    <h3 id="article-count">0</h3>
-                    <p id="article-note">Loaded from frontpage_articles</p>
-                </article>
-                <article class="card metric">
-                    <p class="card-label">Interviews</p>
-                    <h3 id="interview-count">0</h3>
-                    <p id="interview-note">Loaded from interviews</p>
-                </article>
-            </section>
+            <section class="view-stack is-active" data-view-panel="overview">
+                <section class="hero">
+                    <div class="hero-copy">
+                        <p class="section-label">Session Control</p>
+                        <h2 id="session-title">Current session loading</h2>
+                        <p id="session-subtitle">Waiting for Supabase.</p>
+                    </div>
+                    <div class="hero-actions">
+                        <button id="refresh-btn" class="btn btn-secondary" type="button">Refresh</button>
+                        <button id="new-session-btn" class="btn btn-primary" type="button">New Session</button>
+                        <button id="end-session-btn" class="btn btn-ghost" type="button">End Session</button>
+                        <button id="logout-btn" class="btn btn-ghost" type="button">Logout</button>
+                    </div>
+                </section>
 
-            <section class="panel split-panels">
-                <article class="subpanel">
+                <section class="grid" id="stats-strip">
+                    <article class="metric">
+                        <p class="card-label">Active Session</p>
+                        <h3 id="active-session-id">--</h3>
+                        <p id="active-session-state">Inactive</p>
+                    </article>
+                    <article class="metric">
+                        <p class="card-label">Unlocked Legends</p>
+                        <h3 id="unlock-count">0</h3>
+                        <p>Loaded from interviews</p>
+                    </article>
+                    <article class="metric">
+                        <p class="card-label">Citizen Photos</p>
+                        <h3 id="photo-count">0</h3>
+                        <p>Loaded from citizen_photos</p>
+                    </article>
+                    <article class="metric">
+                        <p class="card-label">Articles</p>
+                        <h3 id="article-count">0</h3>
+                        <p>Loaded from frontpage_articles</p>
+                    </article>
+                    <article class="metric">
+                        <p class="card-label">Interviews</p>
+                        <h3 id="interview-count">0</h3>
+                        <p>Loaded from interviews</p>
+                    </article>
+                </section>
+
+                <section class="panel">
                     <div class="panel-header">
                         <div>
-                            <p class="section-label">Citizen Photos</p>
-                            <h2>Session gallery</h2>
-                            <p class="panel-summary" id="photo-summary">Waiting for photo data</p>
+                            <p class="section-label">Recent Activity</p>
+                            <h2>Latest records</h2>
                         </div>
-                        <div class="panel-actions">
-                            <button id="reload-photos-btn" class="btn btn-secondary" type="button">Reload</button>
-                            <button id="delete-session-photos-btn" class="btn btn-ghost" type="button">Clear Session</button>
-                            <button id="delete-all-photos-btn" class="btn btn-ghost" type="button">Delete All</button>
-                        </div>
+                        <button id="reload-activity-btn" class="btn btn-secondary" type="button">Reload</button>
                     </div>
-                    <div class="photo-spotlight" id="photo-spotlight">
-                        <div class="activity-empty">No photo selected.</div>
+                    <div class="activity-list" id="activity-list">
+                        <div class="activity-empty">No data loaded yet.</div>
                     </div>
-                    <div class="photo-list" id="photo-list">
-                        <div class="activity-empty">No photos loaded.</div>
-                    </div>
-                </article>
-
-                <article class="subpanel">
-                    <div class="panel-header">
-                        <div>
-                            <p class="section-label">Unlocks</p>
-                            <h2>Legend unlock feed</h2>
-                            <p class="panel-summary" id="unlock-summary">Waiting for unlock data</p>
-                        </div>
-                        <button id="reload-unlocks-btn" class="btn btn-secondary" type="button">Reload</button>
-                    </div>
-                    <div class="unlock-list" id="unlock-list">
-                        <div class="activity-empty">No unlocks loaded.</div>
-                    </div>
-                    <p class="panel-footnote" id="lock-summary">No NPC profiles loaded</p>
-                </article>
+                </section>
             </section>
 
-            <section class="panel">
-                <div class="panel-header">
-                    <div>
-                        <p class="section-label">Recent Activity</p>
-                        <h2>Latest records</h2>
-                    </div>
-                    <button id="reload-activity-btn" class="btn btn-secondary" type="button">Reload</button>
-                </div>
-                <div class="activity-list" id="activity-list">
-                    <div class="activity-empty">No data loaded yet.</div>
-                </div>
+            <section class="view-stack" data-view-panel="materials">
+                <section class="materials-layout">
+                    <article class="panel material-panel">
+                        <div class="panel-header">
+                            <div>
+                                <p class="section-label">Citizen Photos</p>
+                                <h2>Photo browser</h2>
+                                <p class="panel-summary" id="photo-summary">Waiting for photo data</p>
+                            </div>
+                            <div class="panel-actions">
+                                <button id="reload-photos-btn" class="btn btn-secondary" type="button">Reload</button>
+                                <button id="delete-session-photos-btn" class="btn btn-ghost" type="button">Clear Session</button>
+                                <button id="delete-all-photos-btn" class="btn btn-danger" type="button">Delete All</button>
+                            </div>
+                        </div>
+                        <div class="photo-spotlight" id="photo-spotlight">
+                            <div class="activity-empty">No photo selected.</div>
+                        </div>
+                        <div class="photo-list" id="photo-list">
+                            <div class="activity-empty">No photos loaded.</div>
+                        </div>
+                    </article>
+
+                    <article class="panel material-panel">
+                        <div class="panel-header">
+                            <div>
+                                <p class="section-label">Articles</p>
+                                <h2>Frontpage editor</h2>
+                                <p class="panel-summary" id="article-summary">No articles loaded</p>
+                            </div>
+                            <button id="reload-articles-btn" class="btn btn-secondary" type="button">Reload</button>
+                        </div>
+                        <div class="article-editor">
+                            <div class="article-list" id="article-list"></div>
+                            <form class="edit-form" id="article-form">
+                                <input id="article-id-input" type="hidden">
+                                <label>Title<input id="article-title-input" type="text" required></label>
+                                <label>Subtitle<input id="article-subtitle-input" type="text"></label>
+                                <label>Image URL<input id="article-image-input" type="url"></label>
+                                <label>Layout position<input id="article-layout-input" type="number" min="0"></label>
+                                <label>Body<textarea id="article-body-input" rows="5"></textarea></label>
+                                <div class="form-actions">
+                                    <button class="btn btn-primary" type="submit">Save Article</button>
+                                    <button id="delete-article-btn" class="btn btn-danger" type="button">Delete Article</button>
+                                </div>
+                            </form>
+                        </div>
+                    </article>
+
+                    <article class="panel material-panel">
+                        <div class="panel-header">
+                            <div>
+                                <p class="section-label">Unlocks</p>
+                                <h2>Legend unlocks</h2>
+                                <p class="panel-summary" id="unlock-summary">Waiting for unlock data</p>
+                            </div>
+                            <button id="reload-unlocks-btn" class="btn btn-secondary" type="button">Reload</button>
+                        </div>
+                        <div class="unlock-list" id="unlock-list">
+                            <div class="activity-empty">No unlocks loaded.</div>
+                        </div>
+                        <p class="panel-footnote" id="lock-summary">No NPC profiles loaded</p>
+                    </article>
+
+                    <article class="panel material-panel">
+                        <div class="panel-header">
+                            <div>
+                                <p class="section-label">NPC Defaults</p>
+                                <h2>Story material</h2>
+                                <p class="panel-summary" id="npc-summary">No NPC selected</p>
+                            </div>
+                        </div>
+                        <div class="npc-editor">
+                            <div class="npc-list" id="npc-list"></div>
+                            <form class="edit-form" id="npc-form">
+                                <input id="npc-id-input" type="hidden">
+                                <label>Headline<input id="npc-headline-input" type="text"></label>
+                                <label>Subtitle<input id="npc-subtitle-input" type="text"></label>
+                                <label>Portrait URL<input id="npc-portrait-input" type="url"></label>
+                                <label>Body<textarea id="npc-body-input" rows="5"></textarea></label>
+                                <div class="form-actions">
+                                    <button class="btn btn-primary" type="submit">Save NPC Defaults</button>
+                                </div>
+                            </form>
+                        </div>
+                    </article>
+                </section>
             </section>
         </section>
     </main>

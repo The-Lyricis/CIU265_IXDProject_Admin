@@ -25,6 +25,10 @@ Admin login with remember me
 Single photo delete
 Clear current session photos
 Delete all photos
+Frontpage article edit/delete
+Unlock remove with linked article cleanup
+NPC default headline/subtitle/body edit
+Separated oversight and material desk views
 ```
 
 ## Data sources
@@ -34,6 +38,7 @@ sessions
 citizen_photos
 frontpage_articles
 interviews
+npc_profiles
 ```
 
 ## Supabase
@@ -60,4 +65,8 @@ This admin console uses the public key for reads and Vercel API routes for write
 /api/sessions
 /api/sessions/:id/end
 /api/dashboard
+/api/photos
+/api/articles
+/api/unlocks
+/api/npcs
 ```

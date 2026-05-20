@@ -1,15 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
 import { hasAdminCookie } from './_auth.js';
-
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-function getSupabaseAdmin() {
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
-    return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-        auth: { persistSession: false, autoRefreshToken: false },
-    });
-}
+import { getSupabaseAdmin } from './_supabase.js';
 
 function shortId(value) {
     return value ? String(value).slice(0, 8) : '--';
@@ -74,7 +64,7 @@ export default async function handler(req, res) {
                 .limit(50),
             supabase
                 .from('frontpage_articles')
-                .select('id, created_at, session_id, npc_id, interview_id, title, subtitle, image_url')
+                .select('id, created_at, session_id, npc_id, interview_id, title, subtitle, body, image_url, layout_position')
                 .order('created_at', { ascending: false })
                 .limit(20),
             supabase
@@ -96,7 +86,10 @@ export default async function handler(req, res) {
         const npcMap = new Map((npcResult.data || []).map((row) => [row.id, row]));
         const unlocks = (interviewsResult.data || []).map((row) => toPublicUnlock(row, npcMap.get(row.npc_id)));
         const photos = (photosResult.data || []).map(toPublicPhoto);
-        const articles = articlesResult.data || [];
+        const articles = (articlesResult.data || []).map((row) => ({
+            ...row,
+            npc: row.npc_id ? npcMap.get(row.npc_id) || null : null,
+        }));
         const session = sessionResult.data || null;
 
         const topPhoto = [...photos].sort((a, b) => {
@@ -139,6 +132,7 @@ export default async function handler(req, res) {
             top_photo: topPhoto,
             unlocks,
             articles,
+            npc_profiles: Array.from(npcMap.values()),
             recent_notes: recentNotes,
         });
     } catch (error) {
